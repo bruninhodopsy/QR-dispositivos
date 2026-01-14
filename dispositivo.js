@@ -1,12 +1,11 @@
 // ==== DADOS DOS DISPOSITIVOS ====
-// Aqui você coloca todos os dispositivos que quiser
 const dispositivos = [
   {
     "id": "1234",
-    "nome": "Dispositivo Alpha",
+    "nome": "Dispositivo de teste Alpha n betinha",
     "imagem": "images/testeqr.png",
-    "molde": "1105",
-    "finalidade": "Medir radial e axial",
+    "molde": "FLipnelson",
+    "finalidade": "Um flow rack é uma estrutura de armazenamento dinâmica que utiliza a gravidade para movimentar os itens armazenados. Composto por estantes inclinadas com roletes ou trilhos, ele permite que os produtos sejam carregados em uma extremidade e automaticamente movidos para a outra para serem retirados.",
     "dev1": "Bruno Rocha - Engenharia",
     "dev2": "Matheus Tinti - Engenharia"
   },
@@ -19,7 +18,7 @@ const dispositivos = [
     "dev1": "Outro Dev 1 - Engenharia",
     "dev2": "Outro Dev 2 - Engenharia"
   }
-  // -> adicione novos dispositivos aqui seguindo o mesmo formato
+  
 ];
 
 // ==== PEGANDO O ID DA URL ====
