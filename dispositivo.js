@@ -63,55 +63,124 @@ function setImage(id, src, alt = '') {
   }
 
   function showDeviceList(list) {
-    console.log('[showDeviceList] count=', list.length);
-    const container = document.getElementById('lista') || document.createElement('div');
-    container.id = 'lista';
-    container.innerHTML = '';
-    list.forEach(rec => {
-      const card = document.createElement('div');
-      card.style.border = '1px solid #eee';
-      card.style.padding = '10px';
-      card.style.margin = '8px 0';
-      card.style.borderRadius = '6px';
-      card.style.background = '#fafafa';
+  console.log('[showDeviceList] count=', list.length);
+  const container = document.getElementById('lista') || document.createElement('div');
+  container.id = 'lista';
+  container.innerHTML = '';
 
-      const title = document.createElement('h3');
-      title.textContent = `${rec.Detalhamento || rec.Item || rec.id || 'Sem nome'} (${rec.Item || rec.ID || ''})`;
+  // placeholder que você pediu (vamos normalizar antes de usar)
+  const PLACEHOLDER_RAW = 'https://raw.githubusercontent.com/MatheusTinti/Projetos-Desenvolvidos-Engenharia/refs/heads/main/img/place_holder.png';
 
-      const pCat = document.createElement('p');
-      pCat.innerHTML = `<strong>Categoria:</strong> ${rec.Categoria || ''}`;
+  function normalizeAndEncodeUrl(u) {
+    if (!u) return '';
+    let urlStr = String(u).trim();
 
-      const pResp = document.createElement('p');
-      pResp.innerHTML = `<strong>Responsável:</strong> ${rec["Responsável pelo Desenvolvimento"] || rec.Responsavel || ''}`;
+    // corrige raw do GitHub que veio com "refs/heads"
+    urlStr = urlStr.replace('/refs/heads/', '/');
 
-  
-      const img = document.createElement('img');
-      img.src = rec.Imagem ? encodeURI(rec.Imagem) : '';
-      img.alt = rec.Detalhamento || rec.Item || '';
-      img.style.maxWidth = '120px';
-      img.style.display = rec.Imagem ? '' : 'none';
-      img.style.marginTop = '8px';
-      img.style.borderRadius = '6px';
+    // garante esquema (se alguém colocou sem https)
+    if (!/^[a-zA-Z]+:\/\//.test(urlStr)) {
+      urlStr = 'https://' + urlStr.replace(/^\/+/, '');
+    }
 
-      const openLink = document.createElement('a');
-      openLink.href = `${location.pathname}?item=${encodeURIComponent(rec.Item || rec.ID || rec.id || '')}`;
-      openLink.textContent = 'Abrir';
-      openLink.style.display = 'inline-block';
-      openLink.style.marginTop = '8px';
-
-      card.appendChild(title);
-      card.appendChild(pCat);
-      card.appendChild(pResp);
-      if (rec.Economia) card.appendChild(pEconomia);
-      card.appendChild(img);
-      card.appendChild(openLink);
-      container.appendChild(card);
-    });
-
-    if (!document.getElementById('lista')) {
-      document.querySelector('.container')?.appendChild(container);
+    // tenta parsear e codificar só os segmentos do pathname
+    try {
+      const parsed = new URL(urlStr);
+      parsed.pathname = parsed.pathname
+        .split('/')
+        .map(seg => (seg ? encodeURIComponent(decodeURIComponent(seg)) : ''))
+        .join('/');
+      return parsed.toString();
+    } catch (err) {
+      // fallback: encodeURI (menos agressivo que encodeURIComponent)
+      try { return encodeURI(urlStr); } catch (e) { return urlStr; }
     }
   }
+
+  // já normaliza o placeholder
+  const PLACEHOLDER = normalizeAndEncodeUrl(PLACEHOLDER_RAW);
+
+  list.forEach(rec => {
+    const card = document.createElement('div');
+    card.style.border = '1px solid #eee';
+    card.style.padding = '10px';
+    card.style.margin = '8px 0';
+    card.style.borderRadius = '6px';
+    card.style.background = '#fafafa';
+
+    const title = document.createElement('h3');
+    title.textContent = `${rec.Detalhamento || rec.Item || rec.id || 'Sem nome'}`;
+
+    // Pega a URL vinda do JSON (tenta minúscula e maiúscula)
+    const rawUrl = String(rec.imagem ?? rec.Imagem ?? '').trim();
+
+    const img = document.createElement('img');
+    img.alt = rec.Detalhamento || rec.Item || 'imagem do dispositivo';
+    img.style.maxWidth = '120px';
+    img.style.marginTop = '8px';
+    img.style.borderRadius = '6px';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.style.display = 'none'; // começa escondida até definirmos src válido
+
+    // variável auxiliar para evitar loop de erro (se placeholder também falhar)
+    let usedPlaceholder = false;
+
+    function setImgSrc(url) {
+      if (!url) {
+        img.style.display = 'none';
+        return;
+      }
+      const final = normalizeAndEncodeUrl(url);
+      console.log('[showDeviceList] setImgSrc:', url, '=>', final, 'item=', rec.Item || rec.ID || rec.id);
+      img.src = final;
+      img.style.display = ''; // mostra enquanto carrega
+    }
+
+    // onerror: tenta placeholder uma vez, senão esconde
+    img.onerror = (ev) => {
+      console.warn('[showDeviceList] erro ao carregar imagem:', img.src, 'item=', rec.Item || rec.ID || rec.id, ev);
+      if (!usedPlaceholder && PLACEHOLDER) {
+        usedPlaceholder = true;
+        setImgSrc(PLACEHOLDER);
+        return;
+      }
+      // se já tentou placeholder (ou não tem), esconde a imagem
+      img.style.display = 'none';
+    };
+
+    // onload: garante visibilidade e remove possíveis bordas quebradas
+    img.onload = () => {
+      img.style.display = ''; // garantir visível
+    };
+
+    // decide que src usar inicialmente (primeiro tenta a URL do registro, se houver; senão placeholder direto)
+    if (rawUrl && rawUrl.toLowerCase() !== 'undefined' && rawUrl.toLowerCase() !== 'null') {
+      setImgSrc(rawUrl);
+    } else if (PLACEHOLDER) {
+      usedPlaceholder = true;
+      setImgSrc(PLACEHOLDER);
+    } else {
+      img.style.display = 'none';
+    }
+
+    const openLink = document.createElement('a');
+    openLink.href = `${location.pathname}?item=${encodeURIComponent(rec.Item || rec.ID || rec.id || '')}`;
+    openLink.textContent = 'Abrir';
+    openLink.style.display = 'inline-block';
+    openLink.style.marginTop = '8px';
+
+    card.appendChild(title);
+    card.appendChild(img);
+    card.appendChild(openLink);
+    container.appendChild(card);
+  });
+
+  if (!document.getElementById('lista')) {
+    document.querySelector('.container')?.appendChild(container);
+  }
+}
+
 
   function mapRecordToDevice(rec) {
     const id = String(rec.Item ?? rec.ID ?? rec.id ?? '').trim();
